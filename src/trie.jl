@@ -1,16 +1,16 @@
-@compat type Trie{T}
+mutable struct Trie{T}
     value::T
     children::Dict{Char,Trie{T}}
     is_key::Bool
 
-    function (::Type{Trie{T}}){T}()
+    function Trie{T}() where T
         self = new{T}()
         self.children = Dict{Char,Trie{T}}()
         self.is_key = false
         self
     end
 
-    function (::Type{Trie{T}}){T}(ks, vs)
+    function Trie{T}(ks, vs) where T
         t = Trie{T}()
         for (k, v) in zip(ks, vs)
             t[k] = v
@@ -18,7 +18,7 @@
         return t
     end
 
-    function (::Type{Trie{T}}){T}(kv)
+    function Trie{T}(kv) where T
         t = Trie{T}()
         for (k,v) in kv
             t[k] = v
@@ -28,12 +28,12 @@
 end
 
 Trie() = Trie{Any}()
-Trie{K<:AbstractString,V}(ks::AbstractVector{K}, vs::AbstractVector{V}) = Trie{V}(ks, vs)
-Trie{K<:AbstractString,V}(kv::AbstractVector{Tuple{K,V}}) = Trie{V}(kv)
-Trie{K<:AbstractString,V}(kv::Associative{K,V}) = Trie{V}(kv)
-Trie{K<:AbstractString}(ks::AbstractVector{K}) = Trie{Void}(ks, similar(ks, Void))
+Trie(ks::AbstractVector{K}, vs::AbstractVector{V}) where {K<:AbstractString,V} = Trie{V}(ks, vs)
+Trie(kv::AbstractVector{Tuple{K,V}}) where {K<:AbstractString,V} = Trie{V}(kv)
+Trie(kv::AbstractDict{K,V}) where {K<:AbstractString,V} = Trie{V}(kv)
+Trie(ks::AbstractVector{K}) where {K<:AbstractString} = Trie{Nothing}(ks, similar(ks, Nothing))
 
-function setindex!{T}(t::Trie{T}, val::T, key::AbstractString)
+function setindex!(t::Trie{T}, val::T, key::AbstractString) where T
     node = t
     for char in key
         if !haskey(node.children, char)
@@ -98,7 +98,7 @@ end
 # and i is the index of the current character of the string.
 # The indexing is potentially confusing;
 # see the comments and implementation below for details.
-immutable TrieIterator
+struct TrieIterator
     t::Trie
     str::AbstractString
 end
@@ -108,24 +108,16 @@ end
 # We use a "dummy value" of it.t to keep the type of the state stable.
 # The second element is 0
 # since the root of the trie corresponds to a length 0 prefix of str.
-start(it::TrieIterator) = (it.t, 0)
-
-function next(it::TrieIterator, state)
-    t, i = state
-    i == 0 && return it.t, (it.t, 1)
-
-    t = t.children[it.str[i]]
-    return (t, (t, i + 1))
-end
-
-function done(it::TrieIterator, state)
-    t, i = state
-    i == 0 && return false
-    i == length(it.str) + 1 && return true
-    return !(it.str[i] in keys(t.children))
+function iterate(it::TrieIterator, (t, i) = (it.t, 0))
+    if i == 0
+        return it.t, (it.t, 1)
+    elseif i == length(it.str) + 1 || !(it.str[i] in keys(t.children))
+        return nothing
+    else
+        t = t.children[it.str[i]]
+        return (t, (t, i + 1))
+    end
 end
 
 path(t::Trie, str::AbstractString) = TrieIterator(t, str)
-if VERSION >= v"0.5.0-dev+3294"
-    Base.iteratorsize(::Type{TrieIterator}) = Base.SizeUnknown()
-end
+Base.IteratorSize(::Type{TrieIterator}) = Base.SizeUnknown()

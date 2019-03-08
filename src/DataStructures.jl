@@ -1,38 +1,44 @@
-__precompile__()
-
 module DataStructures
 
-    using Compat
-
-    import Base: <, <=, ==, length, isempty, start, next, done,
+    import Base: <, <=, ==, length, isempty, iterate,
                  show, dump, empty!, getindex, setindex!, get, get!,
-                 in, haskey, keys, merge, copy, cat,
-                 push!, pop!, shift!, unshift!, insert!,
-                 union!, delete!, similar, sizehint!,
-                 isequal, hash,
-                 map, reverse,
+                 in, haskey, keys, merge, copy, cat, collect,
+                 push!, pop!, pushfirst!, popfirst!, insert!, lastindex,
+                 union!, delete!, similar, sizehint!, empty, append!,
+                 isequal, hash, map, filter, reverse,
                  first, last, eltype, getkey, values, sum,
                  merge, merge!, lt, Ordering, ForwardOrdering, Forward,
                  ReverseOrdering, Reverse, Lt,
-                 isless,
-                 union, intersect, symdiff, setdiff, issubset,
-                 find, searchsortedfirst, searchsortedlast, endof, in
+                 isless, union, intersect, symdiff, setdiff, issubset,
+                 searchsortedfirst, searchsortedlast, in,
+                 eachindex, keytype, valtype, minimum, maximum
+
+    using OrderedCollections
+    import OrderedCollections: filter, filter!, isordered
+
+    export complement, complement!
 
     export Deque, Stack, Queue, CircularDeque
     export deque, enqueue!, dequeue!, dequeue_pair!, update!, reverse_iter
     export capacity, num_blocks, front, back, top, top_with_handle, sizehint!
 
-    export Accumulator, counter
+    export Accumulator, counter, reset!, inc!, dec!
+
     export ClassifiedCollections
     export classified_lists, classified_sets, classified_counters
 
+<<<<<<< HEAD
     export IntDisjointSets, DisjointSets, num_groups, find_root, in_same_set, root_union!, get_size
     export push!
+=======
+    export IntDisjointSets, DisjointSets, num_groups, find_root, in_same_set, root_union!
+>>>>>>> master
 
     export AbstractHeap, compare, extract_all!
-    export BinaryHeap, binary_minheap, binary_maxheap, nlargest, nsmallest
-    export MutableBinaryHeap, mutable_binary_minheap, mutable_binary_maxheap
+    export BinaryHeap, BinaryMinHeap, BinaryMaxHeap, nlargest, nsmallest
+    export MutableBinaryHeap, MutableBinaryMinHeap, MutableBinaryMaxHeap
     export heapify!, heapify, heappop!, heappush!, isheap
+    export BinaryMinMaxHeap, popmin!, popmax!, popall!
 
     export OrderedDict, OrderedSet
     export DefaultDict, DefaultOrderedDict
@@ -40,6 +46,7 @@ module DataStructures
 
     export LinkedList, Nil, Cons, nil, cons, head, tail, list, filter, cat,
            reverse
+    export MutableLinkedList
     export SortedDict, SortedMultiDict, SortedSet
     export SDToken, SDSemiToken, SMDToken, SMDSemiToken
     export SetToken, SetSemiToken
@@ -52,9 +59,7 @@ module DataStructures
 
     export MultiDict, enumerateall
 
-    import Base: eachindex, keytype, valtype
-
-    _include_string(str) = eval(parse(str))
+    export findkey
 
     include("delegate.jl")
 
@@ -67,15 +72,14 @@ module DataStructures
     include("disjoint_set.jl")
     include("heaps.jl")
 
-    include("dict_support.jl")
-    include("ordered_dict.jl")
-    include("ordered_set.jl")
     include("default_dict.jl")
+    include("dict_support.jl")
     include("trie.jl")
 
     include("int_set.jl")
 
     include("list.jl")
+    include("mutable_list.jl")
     include("balanced_tree.jl")
     include("tokens.jl")
 
@@ -87,8 +91,6 @@ module DataStructures
     include("sorted_set.jl")
     include("tokens2.jl")
     include("container_loops.jl")
-
-    include("dict_sorting.jl")
 
     export
         CircularBuffer,
@@ -102,31 +104,4 @@ module DataStructures
     export PriorityQueue, peek
 
     include("priorityqueue.jl")
-
-    # Deprecations
-
-    # Remove when Julia 0.6 is released
-    @deprecate iter(s::Stack) s
-    @deprecate iter(q::Queue) q
-
-    # Remove when Julia 0.7 (or whatever version is after v0.6) is released
-    @deprecate DefaultDictBase(default, ks::AbstractArray, vs::AbstractArray) DefaultDictBase(default, zip(ks, vs))
-    @deprecate DefaultDictBase(default, ks, vs) DefaultDictBase(default, zip(ks, vs))
-    @deprecate DefaultDictBase{K,V}(::Type{K}, ::Type{V}, default) DefaultDictBase{K,V}(default)
-
-    @deprecate DefaultDict(default, ks, vs) DefaultDict(default, zip(ks, vs))
-    @deprecate DefaultDict{K,V}(::Type{K}, ::Type{V}, default) DefaultDict{K,V}(default)
-
-    @deprecate DefaultOrderedDict(default, ks, vs) DefaultOrderedDict(default, zip(ks, vs))
-    @deprecate DefaultOrderedDict{K,V}(::Type{K}, ::Type{V}, default) DefaultOrderedDict{K,V}(default)
-
-    function SortedMultiDict{K,V}(ks::AbstractVector{K},
-                                  vs::AbstractVector{V},
-                                  o::Ordering=Forward)
-        Base.depwarn("SortedMultiDict(ks, vs, o::Ordering=Forward) is deprecated.\n" * "Use SortedMultiDict(o, zip(ks,vs)) or SortedMultiDict(zip(ks, vs))", :SortedMultiDict)
-        if length(ks) != length(vs)
-            throw(ArgumentError("SortedMultiDict(ks,vs,o): ks and vs arrays must be the same length"))
-        end
-        SortedMultiDict(o, zip(ks,vs))
-    end
 end

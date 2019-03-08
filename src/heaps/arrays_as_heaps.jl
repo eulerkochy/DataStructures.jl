@@ -44,7 +44,7 @@ function percolate_up!(xs::AbstractArray, i::Integer, x=xs[i], o::Ordering=Forwa
     xs[i] = x
 end
 
-percolate_up!{T}(xs::AbstractArray{T}, i::Integer, o::Ordering) = percolate_up!(xs, i, xs[i], o)
+percolate_up!(xs::AbstractArray{T}, i::Integer, o::Ordering) where {T} = percolate_up!(xs, i, xs[i], o)
 
 """
     heappop!(v, [ord])
@@ -111,7 +111,7 @@ julia> heapify(a, Base.Order.Reverse)
  2
 ```
 """
-heapify(xs::AbstractArray, o::Ordering=Forward) = heapify!(copy!(similar(xs), xs), o)
+heapify(xs::AbstractArray, o::Ordering=Forward) = heapify!(copyto!(similar(xs), xs), o)
 
 """
     isheap(v, ord::Ordering=Forward)

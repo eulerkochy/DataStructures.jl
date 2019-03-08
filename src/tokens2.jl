@@ -1,7 +1,4 @@
-import Base.isless
-import Base.isequal
-import Base.colon
-import Base.endof
+import Base: isless, isequal
 
 const SDMContainer = Union{SortedDict, SortedMultiDict}
 const SAContainer = Union{SDMContainer, SortedSet}
@@ -17,11 +14,11 @@ const SetToken = Tuple{SortedSet, IntSemiToken}
 
 @inline startof(m::SAContainer) = IntSemiToken(beginloc(m.bt))
 
-## Function endof returns the semitoken that points
+## Function lastindex returns the semitoken that points
 ## to the last item in the sorted order,
 ## or the before-start marker if the tree is empty.
 
-@inline endof(m::SAContainer) = IntSemiToken(endloc(m.bt))
+@inline lastindex(m::SAContainer) = IntSemiToken(endloc(m.bt))
 
 ## Function pastendsemitoken returns the token past the end of the data.
 
@@ -62,9 +59,9 @@ end
 
 
 @inline status(ii::Token) =
-       !(ii[2].address in ii[1].bt.useddatacells)? 0 :
-         ii[2].address == 1?                       2 :
-         ii[2].address == 2?                       3 : 1
+       !(ii[2].address in ii[1].bt.useddatacells) ? 0 :
+         ii[2].address == 1 ?                       2 :
+         ii[2].address == 2 ?                       3 : 1
 
 """
     compare(m::SAContainer, s::IntSemiToken, t::IntSemiToken)

@@ -3,7 +3,7 @@
 
 Create a double-ended queue of maximum capacity `n`, implemented as a circular buffer. The element type is `T`.
 """
-type CircularDeque{T}
+mutable struct CircularDeque{T}
     buffer::Vector{T}
     capacity::Int
     n::Int
@@ -11,10 +11,10 @@ type CircularDeque{T}
     last::Int
 end
 
-@compat (::Type{CircularDeque{T}}){T}(n::Int) = CircularDeque(Vector{T}(n), n, 0, 1, n)
+CircularDeque{T}(n::Int) where {T} = CircularDeque(Vector{T}(undef, n), n, 0, 1, n)
 
 Base.length(D::CircularDeque) = D.n
-Base.eltype{T}(::Type{CircularDeque{T}}) = T
+Base.eltype(::Type{CircularDeque{T}}) where {T} = T
 capacity(D::CircularDeque) = D.capacity
 
 function Base.empty!(D::CircularDeque)
@@ -27,17 +27,17 @@ end
 Base.isempty(D::CircularDeque) = D.n == 0
 
 @inline function front(D::CircularDeque)
-    @compat @boundscheck D.n > 0 || throw(BoundsError())
+    @boundscheck D.n > 0 || throw(BoundsError())
     D.buffer[D.first]
 end
 
 @inline function back(D::CircularDeque)
-    @compat @boundscheck D.n > 0 || throw(BoundsError())
+    @boundscheck D.n > 0 || throw(BoundsError())
     D.buffer[D.last]
 end
 
 @inline function Base.push!(D::CircularDeque, v)
-    @compat @boundscheck D.n < D.capacity || throw(BoundsError()) # prevent overflow
+    @boundscheck D.n < D.capacity || throw(BoundsError()) # prevent overflow
     D.n += 1
     tmp = D.last+1
     D.last = ifelse(tmp > D.capacity, 1, tmp)  # wraparound
@@ -53,8 +53,8 @@ end
     v
 end
 
-@inline function Base.unshift!(D::CircularDeque, v)
-    @compat @boundscheck D.n < D.capacity || throw(BoundsError())
+@inline function pushfirst!(D::CircularDeque, v)
+    @boundscheck D.n < D.capacity || throw(BoundsError())
     D.n += 1
     tmp = D.first - 1
     D.first = ifelse(tmp < 1, D.capacity, tmp)
@@ -62,7 +62,7 @@ end
     D
 end
 
-@inline function Base.shift!(D::CircularDeque)
+@inline function popfirst!(D::CircularDeque)
     v = front(D)
     D.n -= 1
     tmp = D.first + 1
@@ -81,16 +81,16 @@ end
 end
 
 @inline function Base.getindex(D::CircularDeque, i::Integer)
-    @compat @boundscheck 1 <= i <= D.n || throw(BoundsError())
+    @boundscheck 1 <= i <= D.n || throw(BoundsError())
     return _unsafe_getindex(D, i)
 end
 
 # Iteration via getindex
-@inline Base.start(d::CircularDeque) = 1
-@inline Base.next(d::CircularDeque, i) = (_unsafe_getindex(d, i), i+1)
-@inline Base.done(d::CircularDeque, i) = i == d.n + 1
+@inline function iterate(d::CircularDeque, i = 1)
+    i == d.n + 1 ? nothing : (_unsafe_getindex(d, i), i+1)
+end
 
-function Base.show{T}(io::IO, D::CircularDeque{T})
+function Base.show(io::IO, D::CircularDeque{T}) where T
     print(io, "CircularDeque{$T}([")
     for i = 1:length(D)
         print(io, D[i])

@@ -13,7 +13,11 @@
 #
 ############################################################
 
+<<<<<<< HEAD
 type IntDisjointSets{T<:Union{Void, Int}}
+=======
+mutable struct IntDisjointSets
+>>>>>>> master
     parents::Vector{Int}
     ranks::Vector{Int}
     sizes::Vector{T}
@@ -139,12 +143,20 @@ get_size(s::IntDisjointSets{<:Void}, x::Integer) = throw(ErrorException("Disjoin
 #
 ############################################################
 
+<<<<<<< HEAD
 @compat type DisjointSets{T, S<:Union{Void, Int}}
+=======
+mutable struct DisjointSets{T}
+>>>>>>> master
     intmap::Dict{T,Int}
     revmap::Vector{T}
     internal::IntDisjointSets{S}
 
+<<<<<<< HEAD
     function (::Type{DisjointSets{T, S}}){T, S}(xs)    # xs must be iterable
+=======
+    function DisjointSets{T}(xs) where T    # xs must be iterable
+>>>>>>> master
         imap = Dict{T,Int}()
         rmap = Vector{T}()
         n = length(xs)
@@ -167,15 +179,15 @@ num_groups(s::DisjointSets) = num_groups(s.internal)
 
 Finds the root element of the subset in `s` which has the element `x` as a member.
 """
-find_root{T}(s::DisjointSets{T}, x::T) = s.revmap[find_root(s.internal, s.intmap[x])]
+find_root(s::DisjointSets{T}, x::T) where {T} = s.revmap[find_root(s.internal, s.intmap[x])]
 
-in_same_set{T}(s::DisjointSets{T}, x::T, y::T) = in_same_set(s.internal, s.intmap[x], s.intmap[y])
+in_same_set(s::DisjointSets{T}, x::T, y::T) where {T} = in_same_set(s.internal, s.intmap[x], s.intmap[y])
 
-union!{T}(s::DisjointSets{T}, x::T, y::T) = s.revmap[union!(s.internal, s.intmap[x], s.intmap[y])]
+union!(s::DisjointSets{T}, x::T, y::T) where {T} = s.revmap[union!(s.internal, s.intmap[x], s.intmap[y])]
 
-root_union!{T}(s::DisjointSets{T}, x::T, y::T) = s.revmap[root_union!(s.internal, s.intmap[x], s.intmap[y])]
+root_union!(s::DisjointSets{T}, x::T, y::T) where {T} = s.revmap[root_union!(s.internal, s.intmap[x], s.intmap[y])]
 
-function push!{T}(s::DisjointSets{T}, x::T)
+function push!(s::DisjointSets{T}, x::T) where T
     id = push!(s.internal)
     s.intmap[x] = id
     push!(s.revmap,x) # Note, this assumes invariant: length(s.revmap) == id

@@ -1,16 +1,19 @@
 # FIFO queue
 
-type Queue{T}
+mutable struct Queue{T}
     store::Deque{T}
 end
 
 """
-    Queue(T[, blksize::Integer=1024])
+    Queue{T}([blksize::Integer=1024])
 
 Create a `Queue` object containing elements of type `T`.
 """
-Queue{T}(ty::Type{T}) = Queue(Deque{T}())
-Queue{T}(ty::Type{T}, blksize::Integer) = Queue(Deque{T}(blksize))
+Queue{T}() where {T} = Queue(Deque{T}())
+Queue{T}(blksize::Integer) where {T} = Queue(Deque{T}(blksize))
+
+@deprecate Queue(::Type{T}) where {T} Queue{T}()
+@deprecate Queue(::Type{T}, blksize::Integer) where {T} Queue{T}(blksize)
 
 isempty(s::Queue) = isempty(s.store)
 length(s::Queue) = length(s.store)
@@ -33,12 +36,10 @@ end
 
 Removes an element from the front of the queue `s` and returns it.
 """
-dequeue!(s::Queue) = shift!(s.store)
+dequeue!(s::Queue) = popfirst!(s.store)
 
 # Iterators
 
-start(q::Queue) = start(q.store)
-next(q::Queue, s) = next(q.store, s)
-done(q::Queue, s) = done(q.store, s)
+iterate(q::Queue, s...) = iterate(q.store, s...)
 
 reverse_iter(q::Queue) = reverse_iter(q.store)
