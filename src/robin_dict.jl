@@ -9,19 +9,20 @@ mutable struct RobinDict{K,V} <: AbstractDict{K,V}
     count::Int
     totalcost::Int
     maxprobe::Int    # length of longest probe
-    
+    idxfloor::Int
+
     function RobinDict{K, V}() where {K, V}
         n = 16 # default size of an empty Dict in Julia
-        new(zeros(UInt, n), Vector{K}(undef, n), Vector{V}(undef, n), zeros(Int, n), 0, 0, 0)
+        new(zeros(UInt, n), Vector{K}(undef, n), Vector{V}(undef, n), zeros(Int, n), 0, 0, 0, 0)
     end
 
     function RobinDict{K, V}(d::RobinDict{K, V}) where {K, V}
-        new(copy(d.slots), copy(d.keys), copy(d.vals), copy(d.dibs), d.count, d.totalcost, d.maxprobe)
+        new(copy(d.slots), copy(d.keys), copy(d.vals), copy(d.dibs), d.count, d.totalcost, d.maxprobe, d.idxfloor)
     end
-    
-    function RobinDict{K, V}(slots, keys, vals, dibs, count, totalcost, maxprobe) where {K, V}
-        new(slots, keys, dibs, vals, count, totalcost, maxprobe)
-    end     
+
+    function RobinDict{K, V}(slots, keys, vals, dibs, count, totalcost, maxprobe, idxfloor) where {K, V}
+        new(slots, keys, dibs, vals, count, totalcost, maxprobe, idxfloor)
+    end
 end
 
 function RobinDict{K,V}(kv) where {K, V}
@@ -42,45 +43,56 @@ function RobinDict{K,V}(ps::Pair...) where {K, V}
 end
 
 RobinDict() = RobinDict{Any,Any}()
+RobinDict(kv::Tuple{}) = RobinDict()
+
+RobinDict(ps::Pair{K,V}...) where {K,V} = RobinDict{K,V}(ps)
+RobinDict(ps::Pair...) = RobinDict(ps)
 
 # default hashing scheme used by Julia
 hashindex(key, sz) = (((hash(key)%Int) & (sz-1)) + 1)::Int
 
-# insert algorithm 
+# insert algorithm
 function rh_insert!(h::RobinDict{K, V}, key, val) where {K, V}
     # table full
-    if h.count == size(h.keys)[1] 
+    if h.count == length(h.keys)
         return -1
     end
-    
-    ckey, cval, cdibs = key, val, 0 
-    sz = size(h.keys)[1]
-    index = hashindex(key, sz) # this is going to be critical
+    ckey, cval, cdibs = key, val, 1
+    index = hashindex(ckey, cdibs)
     @inbounds while h.slots[index] != 0x0
         if h.dibs[index] < cdibs
             h.vals[index], cval = cval, h.vals[index]
             h.keys[index], ckey = ckey, h.keys[index]
+            h.maxprobe = max(h.maxprobe, cdibs)
             h.dibs[index], cdibs = cdibs, h.dibs[index]
         end
         cdibs += 1
-        index = (index & (sz - 1)) + 1
+        h.totalcost += 1
+        index = hashindex(ckey, cdibs)
     end
-    println("Successfully inserted at $index")
+    # println("Successfully inserted at $index")
     @inbounds h.slots[index] = 0x1
     @inbounds h.vals[index] = cval
     @inbounds h.keys[index] = ckey
     @inbounds h.dibs[index] = cdibs
+    h.totalcost += 1
+    h.maxprobe = max(h.maxprobe, cdibs)
+    if h.idxfloor == 0
+        h.idxfloor = index
+    else
+        h.idxfloor = min(h.idxfloor, index)
+    end
     h.count += 1
     return index
 end
-    
-function setindex!(h::RobinDict{K,V}, v0, key0) where V where K
+
+function setindex!(h::RobinDict{K,V}, key0, v0) where {K, V}
     key = convert(K, key0)
     isequal(key, key0) || throw(ArgumentError("$key0 is not a valid key for type $K"))
-    _setindex!(h, v0, key)
+    _setindex!(h, key, v0)
 end
 
-function _setindex!(h::RobinDict{K,V}, v0::V, key::K) where V where K
+function _setindex!(h::RobinDict{K,V}, key::K, v0) where {K, V}
     v = convert(V, v0)
     index = rh_insert!(h, key, v)
     if index > 0
@@ -93,3 +105,29 @@ end
 
 isempty(d::RobinDict) = (d.count == 0)
 length(d::RobinDict) = d.count
+
+function empty!(h::RobinDict{K,V}) where {K, V}
+    fill!(h.slots, 0x0)
+    sz = length(h.slots)
+    empty!(h.dibs)
+    empty!(h.keys)
+    empty!(h.vals)
+    resize!(h.keys, sz)
+    resize!(h.vals, sz)
+    resize!(h.dibs, sz)
+    h.count = 0
+    h.maxprobe = 0
+    h.totalcost = 0
+    h.idxfloor = 0
+    return h
+end
+
+# function rh_search(h::RobinDict{K, V}, key)  where {K, V}
+#     meanpos = convert(Int, round(h.totalcost/h.count))
+#     downpos = meanpos
+#     uppos = downpos + 1
+#     sz = h.count
+#     while downpos > 0 && uppos <= h.maxprobe
+#         downloc = downpos #
+#
+# end
