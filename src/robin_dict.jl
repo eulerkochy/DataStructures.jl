@@ -77,6 +77,9 @@ function rh_insert!(h::RobinDict{K, V}, key::K, val::V) where {K, V}
         index = (index & (sz - 1)) + 1
     end
     # println("Successfully inserted at $index")
+    @inbounds if h.slots[index] == 0x0
+    	h.count += 1
+    end
     @inbounds h.slots[index] = 0x1
     @inbounds h.vals[index] = cval
     @inbounds h.keys[index] = ckey
@@ -88,7 +91,6 @@ function rh_insert!(h::RobinDict{K, V}, key::K, val::V) where {K, V}
     else
         h.idxfloor = min(h.idxfloor, index)
     end
-    h.count += 1
     return index
 end
 
