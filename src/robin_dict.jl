@@ -54,15 +54,18 @@ RobinDict(ps::Pair...) = RobinDict(ps)
 hashindex(key, sz) = (((hash(key)%Int) & (sz-1)) + 1)::Int
 
 # insert algorithm
-function rh_insert!(h::RobinDict{K, V}, key, val) where {K, V}
+function rh_insert!(h::RobinDict{K, V}, key::K, val::V) where {K, V}
     # table full
     if h.count == length(h.keys)
         return -1
     end
     ckey, cval, cdibs = key, val, 0
     sz = length(h.keys)
-    index = hashindex(ckey, cdibs)
-    @inbounds while h.slots[index] != 0x0
+    index = hashindex(ckey, sz)
+    @inbounds while true
+    	if (h.slots[index] == 0x0) || (h.slots[index] == 0x1 && h.keys[index] == ckey)
+    		break
+    	end
         if h.dibs[index] < cdibs
             h.vals[index], cval = cval, h.vals[index]
             h.keys[index], ckey = ckey, h.keys[index]
@@ -89,11 +92,11 @@ function rh_insert!(h::RobinDict{K, V}, key, val) where {K, V}
     return index
 end
 
-@propagate_inbound isslotempty(h::RobinDict{K, V}, i) where {K, V} = h.slots[i] == 0x0
-@propagate_inbound isslotfilled(h::RobinDict{K, V}, i) where {K, V} = h.slots[i] == 0x1
-@propagate_inbound isslotdeleted(h::RobinDict{K, V}, i) where {K, V} = h.slots[i] == 0x2
+isslotempty(h::RobinDict{K, V}, i) where {K, V} = h.slots[i] == 0x0
+isslotfilled(h::RobinDict{K, V}, i) where {K, V} = h.slots[i] == 0x1
+isslotdeleted(h::RobinDict{K, V}, i) where {K, V} = h.slots[i] == 0x2
 
-function setindex!(h::RobinDict{K,V}, key0, v0) where {K, V}
+function setindex!(h::RobinDict{K,V}, v0, key0) where {K, V}
     key = convert(K, key0)
     isequal(key, key0) || throw(ArgumentError("$key0 is not a valid key for type $K"))
     _setindex!(h, key, v0)
