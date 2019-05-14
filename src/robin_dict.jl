@@ -1,4 +1,6 @@
-import Base: setindex!, sizehint!, empty!, isempty, length
+import Base: setindex!, sizehint!, empty!, isempty, length, getindex
+
+const LOAD_FACTOR = 0.90
 
 mutable struct RobinDict{K,V} <: AbstractDict{K,V}
     #there is no need to maintain an table_size as an additional variable
@@ -57,7 +59,8 @@ function rh_insert!(h::RobinDict{K, V}, key, val) where {K, V}
     if h.count == length(h.keys)
         return -1
     end
-    ckey, cval, cdibs = key, val, 1
+    ckey, cval, cdibs = key, val, 0
+    sz = length(h.keys)
     index = hashindex(ckey, cdibs)
     @inbounds while h.slots[index] != 0x0
         if h.dibs[index] < cdibs
@@ -68,7 +71,7 @@ function rh_insert!(h::RobinDict{K, V}, key, val) where {K, V}
         end
         cdibs += 1
         h.totalcost += 1
-        index = hashindex(ckey, cdibs)
+        index = (index & (sz - 1)) + 1
     end
     # println("Successfully inserted at $index")
     @inbounds h.slots[index] = 0x1
@@ -85,6 +88,10 @@ function rh_insert!(h::RobinDict{K, V}, key, val) where {K, V}
     h.count += 1
     return index
 end
+
+@propagate_inbound isslotempty(h::RobinDict{K, V}, i) where {K, V} = h.slots[i] == 0x0
+@propagate_inbound isslotfilled(h::RobinDict{K, V}, i) where {K, V} = h.slots[i] == 0x1
+@propagate_inbound isslotdeleted(h::RobinDict{K, V}, i) where {K, V} = h.slots[i] == 0x2
 
 function setindex!(h::RobinDict{K,V}, key0, v0) where {K, V}
     key = convert(K, key0)
@@ -121,13 +128,28 @@ function empty!(h::RobinDict{K,V}) where {K, V}
     h.idxfloor = 0
     return h
 end
+ 
+function rh_search(h::RobinDict{K, V}, key::K) where {K, V}
+	sz = length(h.keys)
+	index = hashindex(key, sz)
+	cdibs = 0
+	while true
+		if h.slots[index] == 0x0
+			return -1
+		elseif cdibs > h.dibs[index]
+			return -1
+		elseif h.keys[index] == key 
+			return index
+		end
+		index = (index & (sz - 1)) + 1
+		cdibs += 1
+	end
+end
 
-# function rh_search(h::RobinDict{K, V}, key)  where {K, V}
-#     meanpos = convert(Int, round(h.totalcost/h.count))
-#     downpos = meanpos
-#     uppos = downpos + 1
-#     sz = h.count
-#     while downpos > 0 && uppos <= h.maxprobe
-#         downloc = downpos #
-#
-# end
+function getindex(h::RobinDict{K, V}, key0) where {K, V}
+	key = convert(K, key0)
+	index = rh_search(h, key)
+	@inbounds return (index < 0) ? throw(KeyError(key)) : h.vals[index]
+end
+
+
