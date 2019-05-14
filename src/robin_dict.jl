@@ -108,7 +108,7 @@ function _setindex!(h::RobinDict{K,V}, key::K, v0) where {K, V}
     v = convert(V, v0)
     index = rh_insert!(h, key, v)
     if index > 0
-        println("Successfully inserted at $index")
+        # println("Successfully inserted at $index")
     else
         throw(error("Dictionary table full"))
     end
