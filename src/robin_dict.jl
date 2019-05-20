@@ -1,6 +1,7 @@
 import Base: setindex!, sizehint!, empty!, isempty, length, getindex, getkey, haskey, iterate, @propagate_inbounds, pop!, delete!, get, isbitstype 
 
-const LOAD_FACTOR = 0.80
+# the load factor arter which the dictionary `rehash` happens
+const ROBIN_DICT_LOAD_FACTOR = 0.80
 
 mutable struct RobinDict{K,V} <: AbstractDict{K,V}
     #there is no need to maintain an table_size as an additional variable
@@ -184,7 +185,7 @@ end
 function _setindex!(h::RobinDict{K,V}, key::K, v0) where {K, V}
     v = convert(V, v0)
     sz = length(h.keys)
-    (h.count > LOAD_FACTOR * sz) && rehash!(h, h.count > 64000 ? h.count*2 : h.count*4)
+    (h.count > ROBIN_DICT_LOAD_FACTOR * sz) && rehash!(h, h.count > 64000 ? h.count*2 : h.count*4)
     index = rh_insert!(h, key, v)
     @assert index > 0
     h
