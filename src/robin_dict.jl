@@ -34,7 +34,7 @@ function RobinDict{K,V}(kv) where {K, V}
     end
     h
 end
-RobinDict{K,V}(p::Pair) where {K,V} = setindex!(Dict{K,V}(), p.second, p.first)
+RobinDict{K,V}(p::Pair) where {K,V} = setindex!(RobinDict{K,V}(), p.second, p.first)
 function RobinDict{K,V}(ps::Pair...) where {K, V}
     h = RobinDict{K,V}()
 #     sizehint!(h, length(ps))
