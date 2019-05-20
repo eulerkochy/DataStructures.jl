@@ -1,4 +1,4 @@
-import Base: setindex!, sizehint!, empty!, isempty, length, getindex, getkey, haskey, iterate, @propagate_inbounds, pop!, delete!, get, isbitstype
+import Base: setindex!, sizehint!, empty!, isempty, length, getindex, getkey, haskey, iterate, @propagate_inbounds, pop!, delete!, get, isbitstype 
 
 const LOAD_FACTOR = 0.80
 
@@ -52,6 +52,8 @@ RobinDict(ps::Pair...) = RobinDict(ps)
 
 # default hashing scheme used by Julia
 hashindex(key, sz) = (((hash(key)%Int) & (sz-1)) + 1)::Int
+
+_tablesz(x::Integer) = x < 16 ? 16 : one(x)<<((sizeof(x)<<3)-leading_zeros(x-1))
 
 # insert algorithm
 function rh_insert!(h::RobinDict{K, V}, key::K, val::V) where {K, V}
@@ -120,7 +122,8 @@ function rehash!(h::RobinDict{K,V}, newsz = length(h.keys)) where {K, V}
     slots = zeros(UInt8,newsz)
     keys = Vector{K}(undef, newsz)
     vals = Vector{V}(undef, newsz)
-    dibs = Vector{Int}(0, newsz)
+    dibs = Vector{Int}(undef, newsz)
+    fill!(dibs, 0)
     totalcost0 = h.totalcost
     count = 0
     maxprobe = 0
@@ -154,8 +157,7 @@ function rehash!(h::RobinDict{K,V}, newsz = length(h.keys)) where {K, V}
     h.vals = vals
     h.count = count
     h.maxprobe = maxprobe
-    @assert h.totalcost == totalcost
-
+    @assert h.totalcost == totalcost0
     return h
 end
 
@@ -172,9 +174,9 @@ end
 function _setindex!(h::RobinDict{K,V}, key::K, v0) where {K, V}
     v = convert(V, v0)
     sz = length(h.keys)
-    if h.count > LOAD_FACTOR * sz
-        rehash!(h, h.count > 64000 ? h.count*2 : h.count*4)
+    (h.count > LOAD_FACTOR * sz) && rehash!(h, h.count > 64000 ? h.count*2 : h.count*4)
     index = rh_insert!(h, key, v)
+    @assert index > 0
     h
 end
 
