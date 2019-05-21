@@ -161,6 +161,7 @@ function rehash!(h::RobinDict{K,V}, newsz = length(h.keys)) where {K, V}
     h.slots = slots
     h.keys = keys
     h.vals = vals
+    h.dibs = dibs
     h.count = count
     h.maxprobe = maxprobe
     @assert h.totalcost == totalcost0
