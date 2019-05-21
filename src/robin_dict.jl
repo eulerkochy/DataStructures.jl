@@ -170,7 +170,7 @@ end
 
 function sizehint!(d::RobinDict, newsz)
     newsz = _tablesz(newsz*2)  # *2 for keys and values in same array
-    oldsz = length(d.ht)
+    oldsz = length(d.keys)
     # grow at least 25%
     if newsz < (oldsz*5)>>2
         return d
