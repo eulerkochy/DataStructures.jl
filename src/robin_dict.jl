@@ -79,10 +79,15 @@ function rh_insert!(h::RobinDict{K, V}, key::K, val::V) where {K, V}
         h.totalcost += 1
         index = (index & (sz - 1)) + 1
     end
-    # println("Successfully inserted at $index")
+
+    @inbounds if h.slots[index] == 0x1 && h.keys[index] == ckey
+        return index
+    end
+
     @inbounds if h.slots[index] == 0x0
     	h.count += 1
     end
+
     @inbounds h.slots[index] = 0x1
     @inbounds h.vals[index] = cval
     @inbounds h.keys[index] = ckey
@@ -256,16 +261,44 @@ function skip_deleted(h::RobinDict, i)
     return 0
 end
 
+# backward shift deletion by not keeping any tombstones
 function rh_delete!(h::RobinDict{K, V}, index) where {K, V}
-    if index < 0
-        return false;
-    else
-        @inbounds h.slots[index] = 0x2
-        isbitstype(K) || ccall(:jl_arrayunset, Cvoid, (Any, UInt), h.keys, index-1)
-        isbitstype(V) || ccall(:jl_arrayunset, Cvoid, (Any, UInt), h.vals, index-1)
-        h.count -= 1
-        return true
+    #forceful
+    (index < 0) && return false;
+
+    #this assumes that  the key is present in the dictionary at index 
+    index0 = index
+    sz = length(h.keys)
+    while true
+        index0 = (index0 & (sz - 1)) + 1
+        if h.slots[index0] == 0x0
+            break
+        end
     end
+    #index0 represents the first empty slot in linear probe
+    
+    # the backwards shifting algorithm
+    curr = index
+    next = (index & (sz - 1)) + 1
+
+    while next != index0 
+        h.slots[curr] = h.slots[next]
+        h.vals[curr] = h.vals[next]
+        h.keys[curr] = h.keys[next]
+        h.dibs[curr] = (h.dibs[next] > 0) ? (h.dibs[next] - 1) : 0
+        curr = next
+        next = (next & (sz-1)) + 1
+    end
+
+    #curr is at the last position, reset back to normal
+    h.slots[curr] = 0x0
+    ccall(:jl_arrayunset, Cvoid, (Any, UInt), h.keys, index-1)
+    ccall(:jl_arrayunset, Cvoid, (Any, UInt), h.vals, index-1)
+    h.dibs[curr] = 0
+    h.count -= 1
+    h.totalcost += 1
+
+    return h
 end
 
 function _pop!(h::RobinDict, index)
