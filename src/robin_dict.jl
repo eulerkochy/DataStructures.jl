@@ -222,22 +222,10 @@ function empty!(h::RobinDict{K,V}) where {K, V}
     h.idxfloor = 0
     return h
 end
-
-function shift_backwards(h::RobinDict,i::Int)
-    sz = length(h.slots)
-    for j = 1 : AVG_PROBE_LENGTH
-        i = (i-1) & (sz-1)
-        if i==0
-            i = sz
-        end
-    end
-    return i  
-end
  
 function rh_search(h::RobinDict{K, V}, key::K) where {K, V}
 	sz = length(h.keys)
 	index = hashindex(key, sz)
-    index = shift_backwards(h, index)
 	while true
 		if h.slots[index] == 0x0
 			return -1
@@ -290,12 +278,16 @@ function rh_delete!(h::RobinDict{K, V}, index) where {K, V}
     next = (index & (sz - 1)) + 1
 
     while next != index0 
-        h.slots[curr] = h.slots[next]
-        h.vals[curr] = h.vals[next]
-        h.keys[curr] = h.keys[next]
-        h.dibs[curr] = (h.dibs[next] > 0) ? (h.dibs[next] - 1) : 0
-        curr = next
-        next = (next & (sz-1)) + 1
+        if hdibs[next] > 0
+            h.slots[curr] = h.slots[next]
+            h.vals[curr] = h.vals[next]
+            h.keys[curr] = h.keys[next]
+            h.dibs[curr] = (h.dibs[next] - 1)
+            curr = next
+            next = (next & (sz-1)) + 1
+        else
+            break
+        end
     end
 
     #curr is at the last position, reset back to normal
