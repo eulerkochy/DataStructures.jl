@@ -226,6 +226,7 @@ end
 function rh_search(h::RobinDict{K, V}, key::K) where {K, V}
 	sz = length(h.keys)
 	index = hashindex(key, sz)
+    cdibs = 0
 	while true
 		if h.slots[index] == 0x0
 			return -1
@@ -278,7 +279,7 @@ function rh_delete!(h::RobinDict{K, V}, index) where {K, V}
     next = (index & (sz - 1)) + 1
 
     while next != index0 
-        if hdibs[next] > 0
+        if h.dibs[next] > 0
             h.slots[curr] = h.slots[next]
             h.vals[curr] = h.vals[next]
             h.keys[curr] = h.keys[next]
@@ -297,7 +298,8 @@ function rh_delete!(h::RobinDict{K, V}, index) where {K, V}
     h.dibs[curr] = 0
     h.count -= 1
     h.totalcost += 1
-
+    # this is necessary because key at idxfloor might get deleted 
+    h1.idxfloor = get_idxfloor(h)
     return h
 end
 
@@ -319,7 +321,7 @@ end
 
 function pop!(h::RobinDict)
     isempty(h) && throw(ArgumentError("dict must be non-empty"))
-    idx = skip_deleted_floor!(h)
+    idx = h.idxfloor
     @inbounds key = h.keys[idx]
     @inbounds val = h.vals[idx]
     rh_delete!(h, idx)
@@ -331,8 +333,6 @@ function delete!(h::RobinDict{K, V}, key::K) where {K, V}
     if index > 0
         rh_delete!(h, index)
     end
-    # this is necessary because key at idxfloor might get deleted 
-    h1.idxfloor = get_idxfloor(h)
     return h
 end
 
