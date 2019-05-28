@@ -218,7 +218,6 @@ end
 
 @propagate_inbounds isslotempty(h::RobinDict{K, V}, i) where {K, V} = h.slots[i] == 0x0
 @propagate_inbounds isslotfilled(h::RobinDict{K, V}, i) where {K, V} = h.slots[i] == 0x1
-@propagate_inbounds isslotdeleted(h::RobinDict{K, V}, i) where {K, V} = h.slots[i] == 0x2
 
 function setindex!(h::RobinDict{K,V}, v0, key0) where {K, V}
     key = convert(K, key0)
