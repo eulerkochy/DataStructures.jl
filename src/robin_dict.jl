@@ -1,4 +1,4 @@
-import Base: setindex!, sizehint!, empty!, isempty, length, getindex, getkey, haskey, iterate, @propagate_inbounds, pop!, delete!, get, isbitstype, isiterable
+import Base: setindex!, sizehint!, empty!, isempty, length, getindex, getkey, haskey, iterate, @propagate_inbounds, pop!, delete!, get, isbitstype, in, isiterable, dict_with_eltype, KeySet, Callable
 
 # the load factor arter which the dictionary `rehash` happens
 const ROBIN_DICT_LOAD_FACTOR = 0.80
@@ -65,6 +65,32 @@ function RobinDict(kv)
             rethrow()
         end
     end
+end
+
+function grow_to!(dest::RobinDict{K, V}, itr) where {K, V}
+    y = iterate(itr)
+    y === nothing && return dest
+    ((k,v), st) = y
+    dest2 = empty(dest, typeof(k), typeof(v))
+    dest2[k] = v
+    grow_to!(dest2, itr, st)
+end
+
+function grow_to!(dest::RobinDict{K,V}, itr, st) where {K, V}
+    y = iterate(itr, st)
+    while y !== nothing
+        (k,v), st = y
+        if isa(k,K) && isa(v,V)
+            dest[k] = v
+        else
+            new = empty(dest, promote_typejoin(K,typeof(k)), promote_typejoin(V,typeof(v)))
+            merge!(new, dest)
+            new[k] = v
+            return grow_to!(new, itr, st)
+        end
+        y = iterate(itr, st)
+    end
+    return dest
 end
 
 # default hashing scheme used by Julia
@@ -289,13 +315,36 @@ function getindex(h::RobinDict{K, V}, key0) where {K, V}
 	@inbounds return (index < 0) ? throw(KeyError(key)) : h.vals[index]
 end
 
-# function get(default::Callable, h::RobinDict{K,V}, key) where {K, V}
-#     index = rh_search(h, key)
-#     @inbounds return (index < 0) ? default() : h.vals[index]::V
-# end
+function get(h::RobinDict{K,V}, key, default) where {K, V}
+    index = rh_search(h, key)
+    @inbounds return (index < 0) ? default : h.vals[index]::V
+end
+
+function get(default::Callable, h::RobinDict{K,V}, key) where {K, V}
+    index = rh_search(h, key)
+    @inbounds return (index < 0) ? default() : h.vals[index]::V
+end
+
+function get!(default::Callable, h::RobinDict{K,V}, key0) where {K, V}
+    key = convert(K, key0)
+    if !isequal(key, key0)
+        throw(ArgumentError("$(limitrepr(key0)) is not a valid key for type $K"))
+    end
+    return _get!(default, h, key)
+end
+
+function _get!(default::Callable, h::RobinDict{K,V}, key::K) where V where K
+    index = rh_search(h, key)
+    
+    index > 0 && return h.vals[index]
+
+    v = convert(V, default())
+    rh_insert!(h, key, v)
+    return v
+end
 
 haskey(h::RobinDict, key) = (rh_search(h, key) > 0) 
-# in(key, v::KeySet{<:Any, <:RobinDict}) = (rh_search(v.dict, key) >= 0)
+in(key, v::KeySet{<:Any, <:RobinDict}) = (rh_search(v.dict, key) >= 0)
 
 function getkey(h::RobinDict{K,V}, key, default) where {K, V}
     index = rh_search(h, key)
