@@ -3,9 +3,6 @@ import Base: setindex!, sizehint!, empty!, isempty, length, getindex, getkey, ha
 # the load factor arter which the dictionary `rehash` happens
 const ROBIN_DICT_LOAD_FACTOR = 0.80
 
-# the maximum average probe length using Robin Hood hashing 
-const AVG_PROBE_LENGTH = 8
-
 mutable struct RobinDict{K,V} <: AbstractDict{K,V}
     #there is no need to maintain an table_size as an additional variable
     slots::Array{UInt8,1} # indicator, to be used later on
