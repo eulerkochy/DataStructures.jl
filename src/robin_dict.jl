@@ -3,9 +3,6 @@ import Base: setindex!, sizehint!, empty!, isempty, length, getindex, getkey, ha
 # the load factor arter which the dictionary `rehash` happens
 const ROBIN_DICT_LOAD_FACTOR = 0.80
 
-# the maximum average probe length using Robin Hood hashing 
-const AVG_PROBE_LENGTH = 8
-
 mutable struct RobinDict{K,V} <: AbstractDict{K,V}
     #there is no need to maintain an table_size as an additional variable
     slots::Array{UInt8,1} # indicator, to be used later on
@@ -40,7 +37,7 @@ function RobinDict{K,V}(kv) where {K, V}
     h
 end
 RobinDict{K,V}(p::Pair) where {K,V} = setindex!(RobinDict{K,V}(), p.second, p.first)
-function RobinDict{K,V}(ps::Pair...) where {K, V}
+function RobinDict{K,V}(ps::Pair{K, V}...) where {K, V}
     h = RobinDict{K,V}()
     sizehint!(h, length(ps))
     for p in ps
@@ -52,46 +49,36 @@ end
 RobinDict() = RobinDict{Any,Any}()
 RobinDict(kv::Tuple{}) = RobinDict()
 
+RobinDict(kv::Tuple{Vararg{Pair{K,V}}}) where {K,V}       = RobinDict{K,V}(kv)
+RobinDict(kv::Tuple{Vararg{Pair{K}}}) where {K}           = RobinDict{K,Any}(kv)
+RobinDict(kv::Tuple{Vararg{Pair{K,V} where K}}) where {V} = RobinDict{Any,V}(kv)
+RobinDict(kv::Tuple{Vararg{Pair}})                        = RobinDict{Any,Any}(kv)
+
+RobinDict(kv::AbstractArray{Tuple{K,V}}) where {K,V} = RobinDict{K,V}(kv)
+RobinDict(kv::AbstractArray{Pair{K,V}}) where {K,V}  = RobinDict{K,V}(kv)
+RobinDict(kv::AbstractDict{K,V}) where {K,V} = RobinDict{K,V}(kv)
+
 RobinDict(ps::Pair{K,V}...) where {K,V} = RobinDict{K,V}(ps)
-RobinDict(ps::Pair...) = RobinDict(ps)
+RobinDict(ps::Pair{K}...,) where {K}             = RobinDict{K,Any}(ps)
+RobinDict(ps::(Pair{K,V} where K)...,) where {V} = RobinDict{Any,V}(ps)
+RobinDict(ps::Pair...) = RobinDict{Any,Any}(ps)
 
 function RobinDict(kv)
     try
-        dict_with_eltype((K, V) -> RobinDict{K, V}, kv, eltype(kv))
-    catch
-        if !isiterable(typeof(kv)) || !all(x->isa(x,Union{Tuple,Pair}),kv)
+        dict_with_eltype(kv, eltype(kv))
+    catch e
+        if isempty(methods(iterate, (typeof(kv),))) ||
+            !all(x->isa(x,Union{Tuple,Pair}),kv)
             throw(ArgumentError("RobinDict(kv): kv needs to be an iterator of tuples or pairs"))
         else
-            rethrow()
+            rethrow(e)
         end
     end
 end
 
-function grow_to!(dest::RobinDict{K, V}, itr) where {K, V}
-    y = iterate(itr)
-    y === nothing && return dest
-    ((k,v), st) = y
-    dest2 = empty(dest, typeof(k), typeof(v))
-    dest2[k] = v
-    grow_to!(dest2, itr, st)
-end
-
-function grow_to!(dest::RobinDict{K,V}, itr, st) where {K, V}
-    y = iterate(itr, st)
-    while y !== nothing
-        (k,v), st = y
-        if isa(k,K) && isa(v,V)
-            dest[k] = v
-        else
-            new = empty(dest, promote_typejoin(K,typeof(k)), promote_typejoin(V,typeof(v)))
-            merge!(new, dest)
-            new[k] = v
-            return grow_to!(new, itr, st)
-        end
-        y = iterate(itr, st)
-    end
-    return dest
-end
+dict_with_eltype(kv, ::Type{Tuple{K,V}}) where {K,V} = RobinDict{K,V}(kv)
+dict_with_eltype(kv, ::Type{Pair{K,V}}) where {K,V} = RobinDict{K,V}(kv)
+dict_with_eltype(kv, t) = RobinDict{Any,Any}(kv)
 
 # default hashing scheme used by Julia
 hashindex(key, sz) = (((hash(key)%Int) & (sz-1)) + 1)::Int
@@ -296,7 +283,7 @@ end
 function rh_search(h::RobinDict{K, V}, key::K) where {K, V}
 	sz = length(h.keys)
 	index = hashindex(key, sz)
-    cdibs = 1
+	cdibs = 1
 	while true
 		if h.slots[index] == 0x0
 			return -1
