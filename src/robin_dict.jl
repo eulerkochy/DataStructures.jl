@@ -283,7 +283,7 @@ end
 function rh_search(h::RobinDict{K, V}, key::K) where {K, V}
 	sz = length(h.keys)
 	index = hashindex(key, sz)
-    cdibs = 1
+	cdibs = 1
 	while true
 		if h.slots[index] == 0x0
 			return -1
