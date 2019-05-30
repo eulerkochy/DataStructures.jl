@@ -1,4 +1,7 @@
-import Base: setindex!, sizehint!, empty!, isempty, length, getindex, getkey, haskey, iterate, @propagate_inbounds, pop!, delete!, get, get!, isbitstype, in, isiterable, dict_with_eltype, KeySet, Callable
+import Base: setindex!, sizehint!, empty!, isempty, length,
+             getindex, getkey, haskey, iterate, @propagate_inbounds,
+             pop!, delete!, get, get!, isbitstype, in,
+             isiterable, dict_with_eltype, KeySet, Callable
 
 # the load factor arter which the dictionary `rehash` happens
 const ROBIN_DICT_LOAD_FACTOR = 0.80
