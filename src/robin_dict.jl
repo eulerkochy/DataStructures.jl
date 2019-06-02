@@ -95,7 +95,7 @@ function RobinDict(kv)
     try
         dict_with_eltype(kv, eltype(kv))
     catch e
-        if isempty(methods(iterate, (typeof(kv),))) ||
+    if !isiterable(typeof(kv)) || !all(x -> isa(x, Union{Tuple,Pair}), kv)
             !all(x->isa(x,Union{Tuple,Pair}),kv)
             throw(ArgumentError("RobinDict(kv): kv needs to be an iterator of tuples or pairs"))
         else
