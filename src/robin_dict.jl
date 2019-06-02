@@ -93,7 +93,7 @@ RobinDict(ps::Pair...) = RobinDict{Any,Any}(ps)
 
 function RobinDict(kv)
     try
-        dict_with_eltype(kv, eltype(kv))
+        dict_with_eltype((K, V) -> RobinDict{K, V}, kv, eltype(kv))
     catch e
     if !isiterable(typeof(kv)) || !all(x -> isa(x, Union{Tuple,Pair}), kv)
             !all(x->isa(x,Union{Tuple,Pair}),kv)
