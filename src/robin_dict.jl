@@ -485,7 +485,7 @@ function rh_delete!(h::RobinDict{K, V}, index) where {K, V}
     h.count -= 1
     h.totalcost += 1
     # this is necessary because key at idxfloor might get deleted 
-   h.idxfloor = get_next_filled(h, h.idxfloor)
+    h.idxfloor = get_next_filled(h, h.idxfloor)
     return h
 end
 
