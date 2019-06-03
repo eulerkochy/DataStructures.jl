@@ -79,6 +79,15 @@ copy(d::RobinDict) = RobinDict(d)
 RobinDict(ps::Pair{K,V}...) where {K,V} = RobinDict{K,V}(ps)
 RobinDict(ps::Pair...) = RobinDict(ps)
 
+RobinDict(kv::Tuple{Vararg{Pair{K,V}}}) where {K,V}       = RobinDict{K,V}(kv)
+RobinDict(kv::Tuple{Vararg{Pair{K}}}) where {K}           = RobinDict{K,Any}(kv)
+RobinDict(kv::Tuple{Vararg{Pair{K,V} where K}}) where {V} = RobinDict{Any,V}(kv)
+RobinDict(kv::Tuple{Vararg{Pair}})                        = RobinDict{Any,Any}(kv)
+
+RobinDict(kv::AbstractArray{Tuple{K,V}}) where {K,V} = RobinDict{K,V}(kv)
+RobinDict(kv::AbstractArray{Pair{K,V}}) where {K,V}  = RobinDict{K,V}(kv)
+RobinDict(kv::AbstractDict{K,V}) where {K,V} = RobinDict{K,V}(kv)
+
 function RobinDict(kv)
     try
         dict_with_eltype((K, V) -> RobinDict{K, V}, kv, eltype(kv))
