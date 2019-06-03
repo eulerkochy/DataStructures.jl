@@ -282,3 +282,10 @@ end
     @test findfirst(isequal(1), RobinDict()) === nothing
     @test findfirst(isequal(1), RobinDict(:a=>2, :b=>3)) === nothing
 end
+
+@testset "haskey" begin
+    h = RobinDict(1=>2, 2=>3)
+    @test haskey(h, 1) == true
+    @test haskey(h, 2) == true
+    @test haskey(h, 3) == false
+end
