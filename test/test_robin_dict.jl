@@ -136,15 +136,15 @@ end
 end
 
 @testset "type of RobinDict constructed from varargs of Pairs" begin
-    @test RobinDict(1=>1, 2=>2.0) isa RobinDict{Int,Any}
-    @test RobinDict(1=>1, 2.0=>2) isa RobinDict{Any,Int}
-    @test RobinDict(1=>1.0, 2.0=>2) isa RobinDict{Any,Any}
+    @test RobinDict(1=>1, 2=>2.0) isa RobinDict{Int,Real}
+    @test RobinDict(1=>1, 2.0=>2) isa RobinDict{Real,Int}
+    @test RobinDict(1=>1.0, 2.0=>2) isa RobinDict{Real,Real}
 
     for T in (Nothing, Missing)
-        @test RobinDict(1=>1, 2=>T()) isa RobinDict{Int,Any}
-        @test RobinDict(1=>T(), 2=>2) isa RobinDict{Int,Any}
-        @test RobinDict(1=>1, T()=>2) isa RobinDict{Any,Int}
-        @test RobinDict(T()=>1, 2=>2) isa RobinDict{Any,Int}
+        @test RobinDict(1=>1, 2=>T()) isa RobinDict{Int,Union{Int,T}}
+        @test RobinDict(1=>T(), 2=>2) isa RobinDict{Int,Union{Int,T}}
+        @test RobinDict(1=>1, T()=>2) isa RobinDict{Union{Int,T},Int}
+        @test RobinDict(T()=>1, 2=>2) isa RobinDict{Union{Int,T},Int}
     end
 end
 
@@ -303,3 +303,4 @@ end
     @test h.totalcost == 0
     @test length(h.dibs) == length(h.keys) == length(h.vals) == length0
 end
+
