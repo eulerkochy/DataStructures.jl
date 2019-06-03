@@ -289,3 +289,17 @@ end
     @test haskey(h, 2) == true
     @test haskey(h, 3) == false
 end
+
+@testset "empty" begin
+    h = RobinDict()
+    for i=1:1000
+        h[i] = i+1
+    end
+    length0 = length(h.dibs)
+    empty!(h)
+    @test h.count == 0
+    @test h.maxprobe == 0
+    @test h.idxfloor == 0
+    @test h.totalcost == 0
+    @test length(h.dibs) == length(h.keys) == length(h.vals) == length0
+end
