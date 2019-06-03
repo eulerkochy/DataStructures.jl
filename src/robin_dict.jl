@@ -1,6 +1,6 @@
 import Base: setindex!, sizehint!, empty!, isempty, length,
              getindex, getkey, haskey, iterate, @propagate_inbounds,
-             pop!, delete!, get, get!, isbitstype, in, hashindex
+             pop!, delete!, get, get!, isbitstype, in, hashindex,
              isiterable, dict_with_eltype, KeySet, Callable, _tablesz
 
 # the load factor arter which the dictionary `rehash` happens
@@ -103,10 +103,6 @@ function RobinDict(kv)
         end
     end
 end
-
-dict_with_eltype(kv, ::Type{Tuple{K,V}}) where {K,V} = RobinDict{K,V}(kv)
-dict_with_eltype(kv, ::Type{Pair{K,V}}) where {K,V} = RobinDict{K,V}(kv)
-dict_with_eltype(kv, t) = RobinDict{Any,Any}(kv)
 
 # insert algorithm
 function rh_insert!(h::RobinDict{K, V}, key::K, val::V) where {K, V}
