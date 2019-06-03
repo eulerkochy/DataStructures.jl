@@ -4,7 +4,7 @@ import Base: setindex!, sizehint!, empty!, isempty, length,
              isiterable, dict_with_eltype, KeySet, Callable, _tablesz
 
 # the load factor arter which the dictionary `rehash` happens
-const ROBIN_DICT_LOAD_FACTOR = 0.80
+const ROBIN_DICT_LOAD_FACTOR = 0.90
 
 """
     RobinDict([itr])
@@ -76,6 +76,7 @@ end
 
 RobinDict() = RobinDict{Any,Any}()
 RobinDict(kv::Tuple{}) = RobinDict()
+copy(d::RobinDict) = RobinDict(d)
 
 RobinDict(kv::Tuple{Vararg{Pair{K,V}}}) where {K,V}       = RobinDict{K,V}(kv)
 RobinDict(kv::Tuple{Vararg{Pair{K}}}) where {K}           = RobinDict{K,Any}(kv)
@@ -145,55 +146,6 @@ function rh_insert!(h::RobinDict{K, V}, key::K, val::V) where {K, V}
     @assert cdibs > 0
     @inbounds h.dibs[index] = cdibs
     
-    h.totalcost += 1
-    h.maxprobe = max(h.maxprobe, cdibs)
-    if h.idxfloor == 0
-        h.idxfloor = index
-    else
-        h.idxfloor = min(h.idxfloor, index)
-    end
-    return index
-end
-
-#same as rh_insert but totalcost doesn't increase here
-function rh_insert_for_rehash!(h::RobinDict{K, V}, key::K, val::V) where {K, V}
-    # table full
-    if h.count == length(h.keys)
-        return -1
-    end
-    ckey, cval, cdibs = key, val, 1
-    sz = length(h.keys)
-    index = hashindex(ckey, sz)
-    @inbounds while true
-        if (h.slots[index] == 0x0) || (h.slots[index] == 0x1 && h.keys[index] == ckey)
-            break
-        end
-        if h.dibs[index] < cdibs
-            h.vals[index], cval = cval, h.vals[index]
-            h.keys[index], ckey = ckey, h.keys[index]
-            h.maxprobe = max(h.maxprobe, cdibs)
-            h.dibs[index], cdibs = cdibs, h.dibs[index]
-        end
-        cdibs += 1
-        index = (index & (sz - 1)) + 1
-    end
-    
-    @inbounds if h.slots[index] == 0x1 && h.keys[index] == ckey
-        h.vals[index] = cval
-        return index
-    end
-
-    @inbounds if h.slots[index] == 0x0
-        h.count += 1
-    end
-
-    @inbounds h.slots[index] = 0x1
-    @inbounds h.vals[index] = cval
-    @inbounds h.keys[index] = ckey
-    
-    @assert cdibs > 0
-    @inbounds h.dibs[index] = cdibs
-    
     h.maxprobe = max(h.maxprobe, cdibs)
     if h.idxfloor == 0
         h.idxfloor = index
@@ -240,14 +192,10 @@ function rehash!(h::RobinDict{K,V}, newsz = length(h.keys)) where {K, V}
         @inbounds if olds[i] == 0x1
             k = oldk[i]
             v = oldv[i]
-            rh_insert_for_rehash!(h, k, v)
-            if h.totalcost != totalcost0
-                # if `h` is changed by a finalizer, retry
-                return rehash!(h, newsz)
-            end
+            rh_insert!(h, k, v)
         end
     end
-    @assert h.totalcost == totalcost0
+    h.totalcost = totalcost0
     return h
 end
 
@@ -277,6 +225,7 @@ function _setindex!(h::RobinDict{K,V}, key::K, v0) where {K, V}
     h.max_lf = max(h.max_lf, h.count / sz)
     index = rh_insert!(h, key, v)
     @assert index > 0
+    h.totalcost += 1
     h
 end
 
@@ -549,7 +498,7 @@ function rh_delete!(h::RobinDict{K, V}, index) where {K, V}
     h.count -= 1
     h.totalcost += 1
     # this is necessary because key at idxfloor might get deleted 
-    h.idxfloor = get_idxfloor(h)
+    h.idxfloor = get_next_filled(h, h.idxfloor)
     return h
 end
 
