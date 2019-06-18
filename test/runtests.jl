@@ -27,8 +27,17 @@ tests = ["int_set",
          "circular_buffer",
          "sorting",
          "priority_queue", 
+<<<<<<< HEAD
          "fenwick", 
          "robin_dict"
+=======
+<<<<<<< HEAD
+         "fenwick", 
+         "robin_dict"
+=======
+         "fenwick"
+>>>>>>> 9c55bda5a4471e70672d787f0be15d2bdb1c2f9b
+>>>>>>> add robindict to updated master
         ]
 
 if length(ARGS) > 0

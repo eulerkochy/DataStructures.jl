@@ -16,8 +16,6 @@ mutable struct CircularBuffer{T} <: AbstractVector{T}
     CircularBuffer{T}(capacity::Int) where {T} = new{T}(capacity, 1, 0, Vector{T}(undef, capacity))
 end
 
-CircularBuffer(capacity) = CircularBuffer{Any}(capacity)
-
 """
     empty!(cb)
 
@@ -60,7 +58,7 @@ end
 """
     cb[i] = data
 
-Store data to the `i`-th element of `CircularBuffer`.
+Store data to the i-th element of CircularBuffer.
 """
 @inline Base.@propagate_inbounds function Base.setindex!(cb::CircularBuffer, data, i::Int)
     cb.buffer[_buffer_index_checked(cb, i)] = data
@@ -100,7 +98,7 @@ end
 """
     popfirst!(cb)
 
-Remove the element from the front of the `CircularBuffer`.
+Remove the first item (at the back) from CircularBuffer.
 """
 function popfirst!(cb::CircularBuffer)
     if cb.length == 0
