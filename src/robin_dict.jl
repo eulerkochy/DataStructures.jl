@@ -32,7 +32,7 @@ RobinDict{String,Int64} with 2 entries:
 ```
 """
 mutable struct RobinDict{K,V} <: AbstractDict{K,V}
-    meta::Vector{UInt}
+    meta::Vector{UInt32}
     keys::Array{K,1}
     vals::Array{V,1}
     count::Int
@@ -41,7 +41,7 @@ end
 
 function RobinDict{K, V}() where {K, V}
     n = 16
-    RobinDict{K, V}(zeros(UInt, n), Vector{K}(undef, n), Vector{V}(undef, n), 0, 0)
+    RobinDict{K, V}(zeros(UInt32, n), Vector{K}(undef, n), Vector{V}(undef, n), 0, 0)
 end
 
 function RobinDict{K, V}(d::RobinDict{K, V}) where {K, V}
@@ -91,18 +91,18 @@ end
 @propagate_inbounds isslotfilled(h::RobinDict, index) = !iszero(h.meta[index])
 @propagate_inbounds isslotempty(h::RobinDict, index) = iszero(h.meta[index])
 
-hash_key(key) = (hash(key)%UInt)
+hash_key(key) = (hash(key)%UInt32)
 desired_index(hash, sz) = (hash & (sz - 1)) + 1
 
-function make_meta(hash::UInt, dibs::Int)
+function make_meta(hash::UInt32, dibs::Int)
     meta = hash
     meta <<= 8
-    meta |= UInt(dibs)
+    meta |= UInt32(dibs)
     return meta
 end 
 
-hash_meta(meta::UInt) = (meta>>8)
-dibs_meta(meta::UInt) = Int(meta & 255)
+hash_meta(meta::UInt32) = (meta>>8)
+dibs_meta(meta::UInt32) = Int(meta & 255)
 
 @propagate_inbounds calculate_distance(h::RobinDict, index) = dibs_meta(h.meta[index])
 
@@ -160,7 +160,7 @@ function rh_insert!(h::RobinDict{K, V}, key::K, val::V) where {K, V}
     return index_curr
 end
 
-function rh_insert_for_rehash!(h_new::RobinDict{K, V}, key::K, val::V, meta::UInt) where {K, V}
+function rh_insert_for_rehash!(h_new::RobinDict{K, V}, key::K, val::V, meta::UInt32) where {K, V}
     # table full
     @assert h_new.count != length(h_new.keys)
     
@@ -226,7 +226,7 @@ function rehash!(h::RobinDict{K,V}, newsz = length(h.keys)) where {K, V}
 
     h.keys = Vector{K}(undef, newsz)
     h.vals = Vector{V}(undef, newsz)
-    h.meta = zeros(UInt,newsz)
+    h.meta = zeros(UInt32,newsz)
     h.count = 0
     h.idxfloor = 0
 
@@ -235,7 +235,8 @@ function rehash!(h::RobinDict{K,V}, newsz = length(h.keys)) where {K, V}
             k = oldk[i]
             v = oldv[i]
             m = oldh[i]
-            rh_insert_for_rehash!(h, k, v, m)
+            rh_insert!(h, k, v)
+            # rh_insert_for_rehash!(h, k, v, m)
         end
     end
     return h
@@ -507,9 +508,9 @@ function rh_delete!(h::RobinDict{K, V}, index) where {K, V}
     end
     
     #curr is at the last position, reset back to normal
-    isbitstype(K) || isbitsunion(K) || ccall(:jl_arrayunset, Cvoid, (Any, UInt), h.keys, curr-1)
-    isbitstype(V) || isbitsunion(V) || ccall(:jl_arrayunset, Cvoid, (Any, UInt), h.vals, curr-1)
-    @inbounds h.meta[curr] = zero(UInt)
+    isbitstype(K) || isbitsunion(K) || ccall(:jl_arrayunset, Cvoid, (Any, UInt32), h.keys, curr-1)
+    isbitstype(V) || isbitsunion(V) || ccall(:jl_arrayunset, Cvoid, (Any, UInt32), h.vals, curr-1)
+    @inbounds h.meta[curr] = zero(UInt32)
 
     h.count -= 1
     # this is necessary because key at idxfloor might get deleted 
